@@ -9,6 +9,9 @@ const app = express();
 //log http layer using morgan logger middleware
 app.use(morgan('common'));
 
+let server;
+
+
 BlogPosts.create("UCLA Job", "Front Dev Avaialbe", "UCLA Career Center");
 BlogPosts.create("Greetings", "I'm an aspiring full stack dev", "Andrew");
 
@@ -65,16 +68,47 @@ app.put('/:id', jsonParser, (req,res) => {
   }
 
   console.log(`Updating shopping list item \`${req.params.id}\``)
-  BlogPosts.update({
+  const newPost = BlogPosts.update({
     "title": req.body.title,
     "content": req.body.content,
     "author": req.body.author,
     "id": req.body.id
   });
-  res.status(204).end();
+  res.status(200).send(newPost);
 });
 
-app.listen(process.env.PORT || 8080, () => {
-    console.log(`Your app is listening on port ${process.env.PORT || 8080}`);
+
+//for asynchronously running/closing server for test purposes
+function runServer() {
+  const port = process.env.PORT || 8080;
+  return new Promise((resolve, reject) => {
+    server = app.listen(port, () => {
+      console.log(`Your app is listening on port ${port}`);
+      resolve(server);
+    })
+    .on('error', err => {
+      reject(err);
+    });
   });
+}
+
+function closeServer() {
+  return new Promise((resolve, reject) => {
+    console.log("Closing server");
+    server.close(err => {
+      if (err) {
+        reject(err);
+        // so we don't also call `resolve()`
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+if (require.main === module) {
+  runServer().catch(err => console.error(err));
+}
+
+module.exports = { app, runServer, closeServer };
 
